@@ -1,45 +1,46 @@
-// Paquete: ecommerce.tda.impl | Clase: RedLogisticaGrafo.java
 package ecommerce.tda.impl;
 
 import ecommerce.model.ConexionLogistica;
-import ecommerce.model.TipoEnvio;
 import ecommerce.tda.RedLogisticaTDA;
 
 public class RedLogisticaGrafo implements RedLogisticaTDA {
 
-    // 1. Definición de los Nodos del Grafo Dinámico (Lista de Adyacencia)
+    // Grafo implementado con lista de adyacencia.
+    // Cada NodoGrafo representa un punto logístico.
     private class NodoGrafo {
-        String idNodo;        // Vértice (Ej: "NODO_EZEIZA")
-        NodoArista arista;    // Puntero a la lista de rutas que SALEN de este nodo
-        NodoGrafo sigNodo;    // Puntero a la siguiente ciudad en la lista principal
+        String idNodo;
+        NodoArista arista;
+        NodoGrafo sigNodo;
     }
 
+    // Cada NodoArista representa una ruta saliente desde un nodo origen.
+    // La conexión guarda únicamente costo y tiempo de viaje.
     private class NodoArista {
-        ConexionLogistica conexion; // El peso multicriterio (distancia, peajes, etc.)
-        NodoGrafo nodoDestino;      // Hacia dónde va esta ruta
-        NodoArista sigArista;       // Siguiente ruta que sale del mismo origen
+        ConexionLogistica conexion;
+        NodoGrafo nodoDestino;
+        NodoArista sigArista;
     }
 
-    private NodoGrafo origen; // Puntero inicial de la lista de vértices
+    private NodoGrafo origen;
 
     @Override
     public void agregarNodoLogistico(String idNodo) {
-        // No permitimos duplicados
         if (buscarNodo(idNodo) != null) return;
 
         NodoGrafo nuevo = new NodoGrafo();
         nuevo.idNodo = idNodo;
         nuevo.arista = null;
-        nuevo.sigNodo = origen; // Insertamos al principio para O(1)
+        nuevo.sigNodo = origen;
         origen = nuevo;
     }
 
-    // Método auxiliar privado para localizar un vértice en memoria
     private NodoGrafo buscarNodo(String id) {
         NodoGrafo aux = origen;
+
         while (aux != null && !aux.idNodo.equals(id)) {
             aux = aux.sigNodo;
         }
+
         return aux;
     }
 
@@ -52,39 +53,65 @@ public class RedLogisticaGrafo implements RedLogisticaTDA {
             throw new IllegalArgumentException("Ambos nodos deben existir para crear una conexión.");
         }
 
-        // Creamos la arista dinámica
+        agregarArista(nodoO, nodoD, conexion);
+
+        // El modelo se mantiene no dirigido: si existe ruta de ida, también existe de vuelta.
+        // Si quieren que sea dirigido, borren esta línea.
+        agregarArista(nodoD, nodoO, conexion);
+    }
+
+    private void agregarArista(NodoGrafo origen, NodoGrafo destino, ConexionLogistica conexion) {
         NodoArista nuevaArista = new NodoArista();
         nuevaArista.conexion = conexion;
-        nuevaArista.nodoDestino = nodoD;
-        
-        // La insertamos al frente de la lista de aristas del nodo Origen
-        nuevaArista.sigArista = nodoO.arista;
-        nodoO.arista = nuevaArista;
-
-        // Si el grafo es NO DIRIGIDO (las rutas son ida y vuelta), tenés que hacer la conexión simétrica:
-        NodoArista aristaInversa = new NodoArista();
-        aristaInversa.conexion = conexion; // Asumiendo que el costo es el mismo al revés
-        aristaInversa.nodoDestino = nodoO;
-        aristaInversa.sigArista = nodoD.arista;
-        nodoD.arista = aristaInversa;
+        nuevaArista.nodoDestino = destino;
+        nuevaArista.sigArista = origen.arista;
+        origen.arista = nuevaArista;
     }
 
     @Override
-    public double obtenerCostoRuta(String idOrigen, String idDestino, TipoEnvio tipoEnvio) {
-        NodoGrafo nodoO = buscarNodo(idOrigen);
-        if (nodoO == null) return Double.MAX_VALUE;
+    public boolean existeConexion(String idOrigen, String idDestino) {
+        return buscarArista(idOrigen, idDestino) != null;
+    }
 
-        // Recorremos la lista de aristas (rutas) de la ciudad de origen
+    @Override
+    public double obtenerCostoRuta(String idOrigen, String idDestino) {
+        NodoArista arista = buscarArista(idOrigen, idDestino);
+
+        if (arista == null) {
+            return Double.MAX_VALUE;
+        }
+
+        return arista.conexion.getCosto();
+    }
+
+    @Override
+    public double obtenerTiempoRuta(String idOrigen, String idDestino) {
+        NodoArista arista = buscarArista(idOrigen, idDestino);
+
+        if (arista == null) {
+            return Double.MAX_VALUE;
+        }
+
+        return arista.conexion.getTiempoHoras();
+    }
+
+    private NodoArista buscarArista(String idOrigen, String idDestino) {
+        NodoGrafo nodoO = buscarNodo(idOrigen);
+
+        if (nodoO == null) {
+            return null;
+        }
+
         NodoArista auxArista = nodoO.arista;
+
         while (auxArista != null) {
-            // Si la ruta va al destino que buscamos, calculamos el peso
             if (auxArista.nodoDestino.idNodo.equals(idDestino)) {
-                return auxArista.conexion.calcularPeso(tipoEnvio);
+                return auxArista;
             }
+
             auxArista = auxArista.sigArista;
         }
 
-        // Si terminó el bucle y no retornó, es porque no hay conexión directa
-        return Double.MAX_VALUE;
+        return null;
     }
 }

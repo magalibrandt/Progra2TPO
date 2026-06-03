@@ -47,9 +47,13 @@ public class MotorAsignacionLogistica {
 
         if (candidatosValidos.isEmpty()) throw new IllegalStateException("Falla de cobertura volumétrica global.");
 
-        candidatosValidos.sort(Comparator.comparingDouble(
-            d -> redLogistica.obtenerCostoRuta(d.getIdNodoLogistico(), pedido.getDestino(), pedido.getTipoEnvio())
+        if (pedido.getTipoEnvio() == TipoEnvio.NORMAL) {
+            candidatosValidos.sort(Comparator.comparingDouble( d -> redLogistica.obtenerCostoRuta(d.getIdNodoLogistico(), pedido.getDestino())
         ));
+        } else {
+            candidatosValidos.sort(Comparator.comparingDouble(d -> redLogistica.obtenerTiempoRuta(d.getIdNodoLogistico(), pedido.getDestino())
+        ));
+}
 
         List<AsignacionDeposito> asignaciones = new ArrayList<>();
         int restante = pedido.getCapacidadRequerida();
@@ -60,7 +64,12 @@ public class MotorAsignacionLogistica {
 
             int capAnterior = deposito.getCapacidadDisponible();
             int cantidadAsignada = Math.min(restante, capAnterior);
-            double costo = redLogistica.obtenerCostoRuta(deposito.getIdNodoLogistico(), pedido.getDestino(), pedido.getTipoEnvio());
+            double valorRuta;
+            if (pedido.getTipoEnvio() == TipoEnvio.NORMAL) {
+                valorRuta = redLogistica.obtenerCostoRuta(deposito.getIdNodoLogistico(), pedido.getDestino());
+            } else {
+                valorRuta = redLogistica.obtenerTiempoRuta(deposito.getIdNodoLogistico(), pedido.getDestino());
+            }
 
             // 1. Primero informamos la acción de asignación lógica
             System.out.println("   -> Asignando desde " + deposito.getIdDeposito() + ": extraídas " + cantidadAsignada + " unidades.");
@@ -75,7 +84,7 @@ public class MotorAsignacionLogistica {
                 System.out.println("     [AVL UPDATE] Depósito " + deposito.getIdDeposito() + " movido al nodo: " + deposito.getCapacidadDisponible());
             }
 
-            asignaciones.add(new AsignacionDeposito(deposito.getIdDeposito(), cantidadAsignada, costo));
+            asignaciones.add(new AsignacionDeposito(deposito.getIdDeposito(), cantidadAsignada, valorRuta));
             restante -= cantidadAsignada;
         }
 
@@ -84,7 +93,7 @@ public class MotorAsignacionLogistica {
         // 3. Mostramos el resumen consolidado dentro del bloque operacional antes del cierre
         System.out.println("\n[RESUMEN DE DESPACHO CONSOLIDADO]");
         for (AsignacionDeposito asig : asignaciones) {
-            System.out.println("  * Asignacion -> Deposito: " + asig.getIdDeposito() + " | Cantidad: " + asig.getCantidad() + " | Peso Logistico: " + asig.getCostoRuta());
+            System.out.println("  * Asignacion -> Deposito: " + asig.getIdDeposito() + " | Cantidad: " + asig.getCantidad() + " | Criterio Logistico: " + asig.getCostoRuta());
         }
 
         pedido.setEstado(EstadoPedido.ASIGNADO);

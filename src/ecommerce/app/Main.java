@@ -38,10 +38,10 @@ public class Main {
         redLogistica.agregarNodoLogistico("NODO_CABA");
         redLogistica.agregarNodoLogistico("DESTINO_X");
 
-        redLogistica.conectarNodos("NODO_EZEIZA", "DESTINO_X", new ConexionLogistica(5, 500, 1000, 1.0, 500));
-        redLogistica.conectarNodos("NODO_AVELLANEDA", "DESTINO_X", new ConexionLogistica(10, 700, 1500, 1.2, 700));
-        redLogistica.conectarNodos("NODO_CABA", "DESTINO_X", new ConexionLogistica(50, 300, 1000, 4.0, 400));
-
+        redLogistica.conectarNodos("NODO_EZEIZA", "DESTINO_X", new ConexionLogistica(5000, 1.0));
+        redLogistica.conectarNodos("NODO_AVELLANEDA", "DESTINO_X", new ConexionLogistica(8000, 1.2));
+        redLogistica.conectarNodos("NODO_CABA", "DESTINO_X", new ConexionLogistica(35000, 4.0));
+        
         System.out.println("[E-COMMERCE] Registrando transacciones en la cola prioritaria...");
         Pedido p1 = new Pedido("P001", TipoEnvio.NORMAL, 50, "DESTINO_X", new Date(System.currentTimeMillis() - 10000));
         Pedido p2 = new Pedido("P002", TipoEnvio.PREMIUM, 50, "DESTINO_X", new Date());
