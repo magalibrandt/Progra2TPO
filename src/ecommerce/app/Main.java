@@ -4,13 +4,15 @@ import ecommerce.controller.MotorAsignacionLogistica;
 import ecommerce.model.*;
 import ecommerce.tda.*;
 import ecommerce.tda.impl.*;
-import java.util.List;
+import java.util.Date;
 
 public class Main {
     public static void main(String[] args) {
         System.out.println("======================================================================");
-        System.out.println("         === SISTEMA LOGÍSTICO ===");
+        System.out.println("         === SISTEMA LOGÍSTICO ===                    ");
         System.out.println("======================================================================");
+
+        // Inicialización de componentes lógicos
         GestorPedidosTDA gestorPedidos = new GestorPedidosPrioridad();
         GestorInformacionPedidoTDA gestorInfo = new GestorInformacionPedidoDiccionario();
         GestorDepositosTDA gestorDepositos = new GestorDepositosDiccionario();
@@ -18,14 +20,9 @@ public class Main {
         RedLogisticaTDA redLogistica = new RedLogisticaGrafo();
 
         System.out.println("\n[CONFIGURACIÓN] Cargando depósitos e indexando volúmenes iniciales...");
-        
-        
-        Deposito d1 = new Deposito("D1", "Depósito Ezeiza", "NODO_EZEIZA", 100);
-        d1.setCapacidadDisponible(90);
-        Deposito d2 = new Deposito("D2", "Depósito Avellaneda", "NODO_AVELLANEDA", 100);
-        d2.setCapacidadDisponible(80);
-        Deposito d3 = new Deposito("D3", "Depósito CABA", "NODO_CABA", 100);
-        d3.setCapacidadDisponible(60);
+        Deposito d1 = new Deposito("D1", "Depósito Ezeiza", "NODO_EZEIZA", 100, 20);
+        Deposito d2 = new Deposito("D2", "Depósito Avellaneda", "NODO_AVELLANEDA", 100, 30);
+        Deposito d3 = new Deposito("D3", "Depósito CABA", "NODO_CABA", 200, 60);
 
         gestorDepositos.agregarDeposito(d1);
         gestorDepositos.agregarDeposito(d2);
@@ -35,33 +32,36 @@ public class Main {
         arbolCapacidad.insertarDeposito(d2);
         arbolCapacidad.insertarDeposito(d3);
 
-        
+        // Mapeo e interconexión del Grafo
+        redLogistica.agregarNodoLogistico("NODO_EZEIZA");
+        redLogistica.agregarNodoLogistico("NODO_AVELLANEDA");
+        redLogistica.agregarNodoLogistico("NODO_CABA");
+        redLogistica.agregarNodoLogistico("DESTINO_X");
+
         redLogistica.conectarNodos("NODO_EZEIZA", "DESTINO_X", new ConexionLogistica(5, 500, 1000, 1.0, 500));
         redLogistica.conectarNodos("NODO_AVELLANEDA", "DESTINO_X", new ConexionLogistica(10, 700, 1500, 1.2, 700));
         redLogistica.conectarNodos("NODO_CABA", "DESTINO_X", new ConexionLogistica(50, 300, 1000, 4.0, 400));
 
         System.out.println("[E-COMMERCE] Registrando transacciones en la cola prioritaria...");
-        Pedido pNormal = new Pedido("P001", TipoEnvio.NORMAL, 50, "DESTINO_X");
-        Pedido pPremium = new Pedido("P002", TipoEnvio.PREMIUM, 50, "DESTINO_X");
+        Pedido p1 = new Pedido("P001", TipoEnvio.NORMAL, 50, "DESTINO_X", new Date(System.currentTimeMillis() - 10000));
+        Pedido p2 = new Pedido("P002", TipoEnvio.PREMIUM, 50, "DESTINO_X", new Date());
 
-        gestorPedidos.encolarPedido(pNormal);
-        gestorPedidos.encolarPedido(pPremium); 
-        gestorInfo.agregarPedido(pNormal);
-        gestorInfo.agregarPedido(pPremium);
+        gestorInfo.agregarPedido(p1);
+        gestorInfo.agregarPedido(p2);
+
+        gestorPedidos.encolarPedido(p1);
+        gestorPedidos.encolarPedido(p2);
 
         System.out.println(" -> Configuración completada con éxito. Listo para simular.");
 
+        // Encendido del Motor Coordinador
         MotorAsignacionLogistica motor = new MotorAsignacionLogistica(gestorPedidos, gestorInfo, gestorDepositos, arbolCapacidad, redLogistica);
 
-        List<AsignacionDeposito> asig1 = motor.procesarSiguientePedido();
-        for (AsignacionDeposito asig : asig1) {
-            System.out.println("  * " + asig);
-        }
+        // Turno 1 (Procesa P002 por prioridad Premium)
+        motor.procesarSiguientePedido();
 
-        List<AsignacionDeposito> asig2 = motor.procesarSiguientePedido();
-        for (AsignacionDeposito asig : asig2) {
-            System.out.println("  * " + asig);
-        }
+        // Turno 2 (Procesa P001)
+        motor.procesarSiguientePedido();
 
         System.out.println("\n======================================================================");
         System.out.println("[AUDITORÍA DE CIERRE] El flujo finalizó de manera limpia.");

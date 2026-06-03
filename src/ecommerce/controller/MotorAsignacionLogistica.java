@@ -7,23 +7,23 @@ import java.util.Comparator;
 import java.util.List;
 
 public class MotorAsignacionLogistica {
-    private GestorPedidosTDA gestorPedidos;
-    private GestorInformacionPedidoTDA gestorInfo;
-    private GestorDepositosTDA gestorDepositos;
-    private ArbolCapacidadDepositosTDA arbolCapacidades;
-    private RedLogisticaTDA redLogistica;
+    private final GestorPedidosTDA gestorPedidos;
+    private final GestorInformacionPedidoTDA gestorInfo;
+    private final GestorDepositosTDA gestorDepositos;
+    private final ArbolCapacidadDepositosTDA arbolCapacidad;
+    private final RedLogisticaTDA redLogistica;
 
     public MotorAsignacionLogistica(GestorPedidosTDA gp, GestorInformacionPedidoTDA gi, GestorDepositosTDA gd, ArbolCapacidadDepositosTDA ac, RedLogisticaTDA rl) {
         this.gestorPedidos = gp;
         this.gestorInfo = gi;
         this.gestorDepositos = gd;
-        this.arbolCapacidades = ac;
+        this.arbolCapacidad = ac;
         this.redLogistica = rl;
     }
 
     public List<AsignacionDeposito> procesarSiguientePedido() {
         if (gestorPedidos.estaVacio()) {
-            System.out.println("[MOTOR LOGÍSTICO] La cola de prioridad se encuentra vacía. No hay demandas pendientes.");
+            System.out.println("[MOTOR LOGÍSTICO] La cola de prioridad se encuentra vacía.");
             return new ArrayList<>();
         }
         Pedido pedido = gestorPedidos.desencolarPedido();
@@ -35,44 +35,22 @@ public class MotorAsignacionLogistica {
 
     public List<AsignacionDeposito> asignarPedido(String idPedido) {
         Pedido pedido = gestorInfo.obtenerPedido(idPedido);
-        if (pedido == null) throw new IllegalArgumentException("El pedido no existe en el registro.");
+        if (pedido == null) throw new IllegalArgumentException("El pedido no existe en el índice.");
 
-        System.out.println("[DICCIONARIO PEDIDOS] Datos validados: Requiere " + pedido.getCapacidadRequerida() + " unidades con destino a: " + pedido.getDestino());
+        System.out.println("[ÍNDICE ÁRBOL B+] Datos validados de forma logarítmica: Requiere " + pedido.getCapacidadRequerida() + " unidades.");
 
-        // 1. Consultar árbol AVL dinámico de capacidades disponibles
-        System.out.println("[ÁRBOL AVL CAPACIDADES] Interrogando nodos jerárquicos para filtrar depósitos con espacio disponible...");
-        List<Deposito> candidatos = arbolCapacidades.obtenerDepositosConCapacidadDisponible();
-        
-        System.out.print(" -> Depósitos detectados en el AVL con espacio > 0: [ ");
-        for(Deposito c : candidatos) {
-            System.out.print(c.getIdDeposito() + "(" + c.getCapacidadDisponible() + "u) ");
-        }
-        System.out.println("]");
-
-        // Filtrar localmente en el motor por las dudas de que quede algún residuo con 0 unidades
+        List<Deposito> candidatos = arbolCapacidad.obtenerDepositosConCapacidadDisponible();
         List<Deposito> candidatosValidos = new ArrayList<>();
         for (Deposito d : candidatos) {
-            if (d.getCapacidadDisponible() > 0) {
-                candidatosValidos.add(d);
-            }
+            if (d.getCapacidadDisponible() > 0) candidatosValidos.add(d);
         }
 
-        if (candidatosValidos.isEmpty()) {
-            throw new IllegalStateException("Falla crítica: No hay capacidad suficiente en la red logística para cubrir la orden.");
-        }
-
-        // 2. Evaluar y ordenar candidatos según las métricas del Grafo multicriterio
-        System.out.println("[GRAFO RED LOGÍSTICA] Evaluando rutas e integrando pesos según criterio comercial (" + pedido.getTipoEnvio() + ")...");
-        for (Deposito d : candidatosValidos) {
-            double costoRuta = redLogistica.obtenerCostoRuta(d.getIdNodoLogistico(), pedido.getDestino(), pedido.getTipoEnvio());
-            System.out.println("   * Evaluando " + d.getIdDeposito() + " (" + d.getNombre() + ") -> Peso de ruta calculado: " + costoRuta);
-        }
+        if (candidatosValidos.isEmpty()) throw new IllegalStateException("Falla de cobertura volumétrica global.");
 
         candidatosValidos.sort(Comparator.comparingDouble(
             d -> redLogistica.obtenerCostoRuta(d.getIdNodoLogistico(), pedido.getDestino(), pedido.getTipoEnvio())
         ));
 
-        // 3. Ejecutar algoritmo de asignación fraccionada/distribuida
         List<AsignacionDeposito> asignaciones = new ArrayList<>();
         int restante = pedido.getCapacidadRequerida();
 
@@ -84,29 +62,34 @@ public class MotorAsignacionLogistica {
             int cantidadAsignada = Math.min(restante, capAnterior);
             double costo = redLogistica.obtenerCostoRuta(deposito.getIdNodoLogistico(), pedido.getDestino(), pedido.getTipoEnvio());
 
-            System.out.println(" -> Removiendo " + cantidadAsignada + " unidades de " + deposito.getIdDeposito() + ". (Stock anterior: " + capAnterior + ")");
+            // 1. Primero informamos la acción de asignación lógica
+            System.out.println("   -> Asignando desde " + deposito.getIdDeposito() + ": extraídas " + cantidadAsignada + " unidades.");
             gestorDepositos.reservarCapacidad(deposito.getIdDeposito(), cantidadAsignada);
             
-            // --- OPTIMIZACIÓN CLAVE ---
-            // Si el depósito se queda sin espacio (capacidad nueva = 0), lo borramos directamente del AVL
+            // 2. Luego informamos el impacto consecuencia en el AVL
             if (deposito.getCapacidadDisponible() == 0) {
-                arbolCapacidades.eliminarDeposito(deposito);
-                System.out.println("   [AVL UPDATE] Depósito " + deposito.getIdDeposito() + " se quedó sin espacio. Removido por completo del AVL.");
+                arbolCapacidad.eliminarDeposito(deposito);
+                System.out.println("     [AVL UPDATE] Depósito " + deposito.getIdDeposito() + " removido por stock en 0.");
             } else {
-                arbolCapacidades.actualizarCapacidad(deposito, capAnterior);
-                System.out.println("   [AVL UPDATE] Depósito " + deposito.getIdDeposito() + " movido al nodo de capacidad: " + deposito.getCapacidadDisponible());
+                arbolCapacidad.actualizarCapacidad(deposito, capAnterior);
+                System.out.println("     [AVL UPDATE] Depósito " + deposito.getIdDeposito() + " movido al nodo: " + deposito.getCapacidadDisponible());
             }
 
             asignaciones.add(new AsignacionDeposito(deposito.getIdDeposito(), cantidadAsignada, costo));
             restante -= cantidadAsignada;
-            System.out.println("   * Capacidad del pedido pendiente de cubrir: " + restante + " unidades.");
         }
 
-        if (restante > 0) throw new IllegalStateException("Falla crítica: No hay capacidad suficiente en la red logística para cubrir la orden.");
+        if (restante > 0) throw new IllegalStateException("No hay capacidad suficiente en la red.");
+
+        // 3. Mostramos el resumen consolidado dentro del bloque operacional antes del cierre
+        System.out.println("\n[RESUMEN DE DESPACHO CONSOLIDADO]");
+        for (AsignacionDeposito asig : asignaciones) {
+            System.out.println("  * Asignacion -> Deposito: " + asig.getIdDeposito() + " | Cantidad: " + asig.getCantidad() + " | Peso Logistico: " + asig.getCostoRuta());
+        }
 
         pedido.setEstado(EstadoPedido.ASIGNADO);
-        gestorInfo.actualizarPedido(pedido);
-        System.out.println("[ESTADO PEDIDO] " + pedido.getIdPedido() + " mutó exitosamente a: " + pedido.getEstado());
+        gestorInfo.actualizarPedido(pedido); 
+        System.out.println("\n[ESTADO PEDIDO] Guardado en la hoja del Árbol B+: ASIGNADO");
         System.out.println("======================================================================");
 
         return asignaciones;

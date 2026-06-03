@@ -2,17 +2,16 @@ package ecommerce.model;
 
 public class AsignacionDeposito {
     private String idDeposito;
-    private int cantidadAsignada;
-    private double costoEstimado;
+    private int cantidad;
+    private double costoRuta;
 
-    public AsignacionDeposito(String idDeposito, int cantidadAsignada, double costoEstimado) {
+    public AsignacionDeposito(String idDeposito, int cantidad, double costoRuta) {
         this.idDeposito = idDeposito;
-        this.cantidadAsignada = cantidadAsignada;
-        this.costoEstimado = costoEstimado;
+        this.cantidad = cantidad;
+        this.costoRuta = costoRuta;
     }
 
-    @Override
-    public String toString() {
-        return "Asignacion -> Deposito: " + idDeposito + " | Cantidad: " + cantidadAsignada + " | Peso Logistico: " + costoEstimado;
-    }
+    public String getIdDeposito() { return idDeposito; }
+    public int getCantidad() { return cantidad; }
+    public double getCostoRuta() { return costoRuta; }
 }

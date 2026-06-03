@@ -7,5 +7,6 @@ public interface GestorInformacionPedidoTDA {
     Pedido obtenerPedido(String idPedido);
     void actualizarPedido(Pedido pedido);
     void eliminarPedido(String idPedido);
+    void cancelarPedido(String idPedido);
     boolean existePedido(String idPedido);
 }

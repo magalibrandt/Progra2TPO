@@ -7,12 +7,12 @@ public class Deposito {
     private int capacidadMaxima;
     private int capacidadDisponible;
 
-    public Deposito(String idDeposito, String nombre, String idNodoLogistico, int capacidadMaxima) {
+    public Deposito(String idDeposito, String nombre, String idNodoLogistico, int capacidadMaxima, int capacidadDisponible) {
         this.idDeposito = idDeposito;
         this.nombre = nombre;
         this.idNodoLogistico = idNodoLogistico;
         this.capacidadMaxima = capacidadMaxima;
-        this.capacidadDisponible = capacidadMaxima;
+        this.capacidadDisponible = capacidadDisponible;
     }
 
     public String getIdDeposito() { return idDeposito; }
@@ -20,5 +20,9 @@ public class Deposito {
     public String getIdNodoLogistico() { return idNodoLogistico; }
     public int getCapacidadMaxima() { return capacidadMaxima; }
     public int getCapacidadDisponible() { return capacidadDisponible; }
-    public void setCapacidadDisponible(int cap) { this.capacidadDisponible = cap; }
+    
+    // Setter necesario para que el Motor descuente stock
+    public void setCapacidadDisponible(int capacidadDisponible) { 
+        this.capacidadDisponible = capacidadDisponible; 
+    }
 }
