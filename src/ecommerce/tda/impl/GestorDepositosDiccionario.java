@@ -16,7 +16,7 @@ public class GestorDepositosDiccionario implements GestorDepositosTDA {
     @Override
     public void agregarDeposito(Deposito deposito) {
         Nodo b = buscar(deposito.getIdDeposito());
-        if (b != null) { b.valor = deposito; } 
+        if (b != null) { b.valor = deposito; }
         else {
             Nodo n = new Nodo();
             n.clave = deposito.getIdDeposito();
@@ -38,13 +38,24 @@ public class GestorDepositosDiccionario implements GestorDepositosTDA {
     @Override
     public boolean tieneCapacidad(String idDeposito, int cantidad) {
         Deposito d = obtenerDeposito(idDeposito);
-        return d != null && d.getCapacidadDisponible() >= cantidad;
+        if (d == null) return false;
+        // Solo se considera disponible la capacidad por encima del stock minimo de seguridad.
+        int disponibleUtilizable = d.getCapacidadDisponible() - d.getCapacidadMinima();
+        return disponibleUtilizable >= cantidad;
     }
 
     @Override
     public void reservarCapacidad(String idDeposito, int cantidad) {
         Deposito d = obtenerDeposito(idDeposito);
-        if (d != null) d.setCapacidadDisponible(d.getCapacidadDisponible() - cantidad);
+        if (d == null) return;
+        int nuevoStock = d.getCapacidadDisponible() - cantidad;
+        if (nuevoStock < d.getCapacidadMinima()) {
+            throw new IllegalStateException(
+                "La reserva dejaria al deposito " + idDeposito +
+                " por debajo del stock minimo de seguridad."
+            );
+        }
+        d.setCapacidadDisponible(nuevoStock);
     }
 
     @Override

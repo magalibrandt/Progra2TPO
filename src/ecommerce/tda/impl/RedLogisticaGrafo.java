@@ -6,15 +6,15 @@ import ecommerce.tda.RedLogisticaTDA;
 public class RedLogisticaGrafo implements RedLogisticaTDA {
 
     // Grafo implementado con lista de adyacencia.
-    // Cada NodoGrafo representa un punto logístico.
+    // Cada NodoGrafo representa un deposito del sistema.
     private class NodoGrafo {
         String idNodo;
         NodoArista arista;
         NodoGrafo sigNodo;
     }
 
-    // Cada NodoArista representa una ruta saliente desde un nodo origen.
-    // La conexión guarda únicamente costo y tiempo de viaje.
+    // Cada NodoArista representa una conexion de transferencia saliente.
+    // La conexion guarda dos atributos independientes: costo y tiempo de transito.
     private class NodoArista {
         ConexionLogistica conexion;
         NodoGrafo nodoDestino;
@@ -50,7 +50,7 @@ public class RedLogisticaGrafo implements RedLogisticaTDA {
         NodoGrafo nodoD = buscarNodo(idDestino);
 
         if (nodoO == null || nodoD == null) {
-            throw new IllegalArgumentException("Ambos nodos deben existir para crear una conexión.");
+            throw new IllegalArgumentException("Ambos nodos deben existir para crear una conexion.");
         }
 
         agregarArista(nodoO, nodoD, conexion);
@@ -70,11 +70,16 @@ public class RedLogisticaGrafo implements RedLogisticaTDA {
 
     @Override
     public boolean existeConexion(String idOrigen, String idDestino) {
+        // Un deposito siempre esta "conectado" a si mismo (es su propio punto de retiro).
+        if (idOrigen.equals(idDestino)) return true;
         return buscarArista(idOrigen, idDestino) != null;
     }
 
     @Override
     public double obtenerCostoRuta(String idOrigen, String idDestino) {
+        // Si origen y destino son el mismo deposito, no hay transferencia que costear.
+        if (idOrigen.equals(idDestino)) return 0;
+
         NodoArista arista = buscarArista(idOrigen, idDestino);
 
         if (arista == null) {
@@ -86,6 +91,9 @@ public class RedLogisticaGrafo implements RedLogisticaTDA {
 
     @Override
     public double obtenerTiempoRuta(String idOrigen, String idDestino) {
+        // Si origen y destino son el mismo deposito, no hay transferencia que esperar.
+        if (idOrigen.equals(idDestino)) return 0;
+
         NodoArista arista = buscarArista(idOrigen, idDestino);
 
         if (arista == null) {
